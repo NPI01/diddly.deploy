@@ -7,6 +7,9 @@ CREATE TABLE public.profiles (
   email TEXT UNIQUE NOT NULL,
   full_name TEXT,
   avatar_url TEXT,
+  bio TEXT,
+  website TEXT,
+  twitter_handle TEXT,
   subscription_status TEXT DEFAULT 'free',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -204,3 +207,29 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER update_article_word_count
   BEFORE UPDATE ON public.articles
   FOR EACH ROW EXECUTE PROCEDURE public.update_word_count();
+
+-- Function to update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Trigger to automatically update updated_at for profiles
+CREATE TRIGGER update_profiles_updated_at
+    BEFORE UPDATE ON public.profiles
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Indexes for better performance
+CREATE INDEX IF NOT EXISTS idx_articles_user_id ON public.articles(user_id);
+CREATE INDEX IF NOT EXISTS idx_articles_status ON public.articles(status);
+CREATE INDEX IF NOT EXISTS idx_articles_created_at ON public.articles(created_at);
+CREATE INDEX IF NOT EXISTS idx_agent_interactions_article_id ON public.agent_interactions(article_id);
+CREATE INDEX IF NOT EXISTS idx_agent_interactions_agent_type ON public.agent_interactions(agent_type);
+CREATE INDEX IF NOT EXISTS idx_article_metrics_article_id ON public.article_metrics(article_id);
+CREATE INDEX IF NOT EXISTS idx_publishing_history_article_id ON public.publishing_history(article_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_twitter_handle ON public.profiles(twitter_handle);
+CREATE INDEX IF NOT EXISTS idx_profiles_website ON public.profiles(website);

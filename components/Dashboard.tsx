@@ -8,7 +8,8 @@ import { useAuth } from '@/components/auth/SimpleAuthProvider'
 import { useFlavorTheme } from '@/components/flavors/FlavorProvider'
 import { FlavorSelector } from '@/components/flavors/FlavorSelector'
 import { ThemeWrapper } from '@/components/flavors/ThemeWrapper'
-import { Plus, FileText, Calendar, TrendingUp, Search, Filter, LogOut, User } from 'lucide-react'
+import { Plus, FileText, Calendar, TrendingUp, Search, Filter } from 'lucide-react'
+import { UserDropdown } from '@/components/UserDropdown'
 
 export function Dashboard() {
   const { user, signOut } = useAuth()
@@ -139,25 +140,7 @@ export function Dashboard() {
               
               <div className="flex items-center space-x-4">
                 <FlavorSelector />
-                
-                <div className={`flex items-center space-x-3 text-sm transition-colors duration-700 ${
-                  theme.id === 'purple-sherbert' ? 'text-violet-200' : 'text-gray-600'
-                }`}>
-                  <User className="h-4 w-4" />
-                  <span>{user?.email}</span>
-                </div>
-                
-                <button
-                  onClick={signOut}
-                  className={`flex items-center space-x-2 px-3 py-2 transition-all duration-300 ${
-                    theme.id === 'purple-sherbert' 
-                      ? 'text-violet-200 hover:text-orange-300' 
-                      : 'text-gray-600 hover:text-gray-800'
-                  }`}
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span>Sign Out</span>
-                </button>
+                <UserDropdown />
                 
                 <button
                   onClick={createNewArticle}

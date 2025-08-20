@@ -132,6 +132,7 @@ export default async function handler(
     const llmResponse = await callLLM(prompt, {
       temperature: 0.7,
       max_tokens: 6000,
+      provider: 'vllm', // Use your custom vLLM endpoint
       system_prompt: 'You are a research assistant. Enhance the content with credible information, statistics, and examples while maintaining accuracy and the author\'s voice.'
     })
 

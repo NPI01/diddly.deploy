@@ -90,6 +90,7 @@ export default async function handler(
     const llmResponse = await callLLM(prompt, {
       temperature: 0.7,
       max_tokens: 4000,
+      provider: 'vllm', // Use your custom vLLM endpoint
       system_prompt: 'You are a professional editor. Return only the edited content without any additional commentary.'
     })
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Loader2, Edit3, PenTool, Search, TrendingUp, X, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { Loader2, Edit3, PenTool, Search, TrendingUp, X, ThumbsUp, ThumbsDown, Zap, Users } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 interface AgentPanelProps {
@@ -22,6 +22,7 @@ interface AgentResult {
 
 export function AgentPanel({ articleId, currentContent, currentTitle, onContentUpdate, onClose }: AgentPanelProps) {
   const [loading, setLoading] = useState<AgentType | null>(null)
+  const [multiLoading, setMultiLoading] = useState(false)
   const [results, setResults] = useState<AgentResult[]>([])
   const [selectedResult, setSelectedResult] = useState<AgentResult | null>(null)
 
@@ -104,6 +105,83 @@ export function AgentPanel({ articleId, currentContent, currentTitle, onContentU
     setSelectedResult(null)
   }
 
+  const callMultipleAgents = async () => {
+    setMultiLoading(true)
+    
+    try {
+      // Get auth token
+      const supabase = createClient()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error('Not authenticated')
+      }
+
+      // Define tasks for parallel execution
+      const tasks = [
+        {
+          agentType: 'editor' as const,
+          content: currentContent,
+          options: { level: 2 }
+        },
+        {
+          agentType: 'writer' as const,
+          content: currentContent,
+          options: { focus: 'content expansion and development' }
+        },
+        {
+          agentType: 'researcher' as const,
+          content: currentContent,
+          options: { focus: 'supporting evidence and credibility' }
+        },
+        {
+          agentType: 'growth' as const,
+          content: currentContent,
+          options: { title: currentTitle, platform: 'substack' }
+        }
+      ]
+
+      const response = await fetch('/api/agent/multi', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({
+          articleId,
+          tasks,
+          options: {
+            provider: 'vllm' // Use your custom model
+          }
+        })
+      })
+
+      const data = await response.json()
+
+      if (data.success && data.results) {
+        const newResults: AgentResult[] = data.results.map((result: any) => ({
+          type: result.agentType,
+          content: result.content,
+          interactionId: data.interactionIds?.[data.results.indexOf(result)]
+        }))
+        
+        setResults(prev => [...newResults, ...prev])
+        
+        // Auto-select the best result (writer or editor)
+        const bestResult = newResults.find(r => r.type === 'writer') || newResults.find(r => r.type === 'editor')
+        if (bestResult) {
+          setSelectedResult(bestResult)
+        }
+      } else {
+        alert(`Multi-agent execution failed: ${data.error}`)
+      }
+    } catch (error) {
+      console.error('Multi-agent error:', error)
+      alert('Failed to execute multiple agents')
+    } finally {
+      setMultiLoading(false)
+    }
+  }
+
   const rateResult = async (result: AgentResult, rating: number) => {
     try {
       await fetch('/api/agent/feedback', {
@@ -132,11 +210,31 @@ export function AgentPanel({ articleId, currentContent, currentTitle, onContentU
       </div>
 
       <div className="p-4 space-y-4">
-        {/* Agent Buttons */}
-        <div className="grid grid-cols-2 gap-3">
+        {/* Parallel Execution Buttons */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-gray-900">Parallel Execution (vLLM)</h4>
+          <div className="grid grid-cols-1 gap-2">
+            <button
+              onClick={callMultipleAgents}
+              disabled={loading !== null || multiLoading}
+              className="flex items-center justify-center space-x-2 p-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 disabled:opacity-50 transition"
+            >
+              {multiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
+              <span className="text-sm font-medium">
+                {multiLoading ? 'Running All Agents...' : 'Run All Agents (Parallel)'}
+              </span>
+              <Zap className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Individual Agent Buttons */}
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium text-gray-900">Individual Agents</h4>
+          <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => callAgent('editor', { level: 1 })}
-            disabled={loading !== null}
+            disabled={loading !== null || multiLoading}
             className="flex items-center space-x-2 p-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 disabled:opacity-50 transition"
           >
             {loading === 'editor' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit3 className="h-4 w-4" />}
@@ -145,7 +243,7 @@ export function AgentPanel({ articleId, currentContent, currentTitle, onContentU
 
           <button
             onClick={() => callAgent('editor', { level: 2 })}
-            disabled={loading !== null}
+            disabled={loading !== null || multiLoading}
             className="flex items-center space-x-2 p-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 disabled:opacity-50 transition"
           >
             {loading === 'editor' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit3 className="h-4 w-4" />}
@@ -154,7 +252,7 @@ export function AgentPanel({ articleId, currentContent, currentTitle, onContentU
 
           <button
             onClick={() => callAgent('editor', { level: 3 })}
-            disabled={loading !== null}
+            disabled={loading !== null || multiLoading}
             className="flex items-center space-x-2 p-3 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 disabled:opacity-50 transition"
           >
             {loading === 'editor' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit3 className="h-4 w-4" />}
@@ -163,7 +261,7 @@ export function AgentPanel({ articleId, currentContent, currentTitle, onContentU
 
           <button
             onClick={() => callAgent('writer')}
-            disabled={loading !== null}
+            disabled={loading !== null || multiLoading}
             className="flex items-center space-x-2 p-3 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 disabled:opacity-50 transition"
           >
             {loading === 'writer' ? <Loader2 className="h-4 w-4 animate-spin" /> : <PenTool className="h-4 w-4" />}
@@ -172,7 +270,7 @@ export function AgentPanel({ articleId, currentContent, currentTitle, onContentU
 
           <button
             onClick={() => callAgent('researcher')}
-            disabled={loading !== null}
+            disabled={loading !== null || multiLoading}
             className="flex items-center space-x-2 p-3 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 disabled:opacity-50 transition"
           >
             {loading === 'researcher' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
@@ -181,7 +279,7 @@ export function AgentPanel({ articleId, currentContent, currentTitle, onContentU
 
           <button
             onClick={() => callAgent('growth')}
-            disabled={loading !== null}
+            disabled={loading !== null || multiLoading}
             className="flex items-center space-x-2 p-3 bg-orange-50 text-orange-700 rounded-lg hover:bg-orange-100 disabled:opacity-50 transition"
           >
             {loading === 'growth' ? <Loader2 className="h-4 w-4 animate-spin" /> : <TrendingUp className="h-4 w-4" />}

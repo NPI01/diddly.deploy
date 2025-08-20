@@ -141,6 +141,7 @@ export default async function handler(
     const llmResponse = await callLLM(prompt, {
       temperature: 0.8,
       max_tokens: 3000,
+      provider: 'vllm', // Use your custom vLLM endpoint
       system_prompt: 'You are a growth strategy expert for content creators. Provide specific, actionable advice to increase engagement and subscriber growth. Format your response with clear sections for each analysis type.'
     })
 

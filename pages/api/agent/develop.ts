@@ -127,6 +127,7 @@ export default async function handler(
     const llmResponse = await callLLM(prompt, {
       temperature: 0.8,
       max_tokens: 6000,
+      provider: 'vllm', // Use your custom vLLM endpoint
       system_prompt: 'You are a professional writer and content developer. Expand and enhance the provided content while maintaining the author\'s voice and intent.'
     })
 
